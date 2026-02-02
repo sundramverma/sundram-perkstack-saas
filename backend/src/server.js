@@ -13,45 +13,48 @@ require("dotenv").config();
 
 const app = express();
 
-// 🔥 MongoDB CONNECT
+/* ================= DATABASE ================= */
 connectDB();
 
-// 🔥 CORS (FINAL FIX)
+/* ================= CORS (FINAL FIX) ================= */
 app.use(
   cors({
-    origin: "http://localhost:3000", // frontend URL
+    origin: [
+      "http://localhost:3000", // local frontend
+      "https://sundram-perkstack-saas.vercel.app", // vercel frontend
+    ],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// 🔥 JSON middleware
+/* ================= MIDDLEWARE ================= */
 app.use(express.json());
 
-// ================= ROUTES ORDER (VERY IMPORTANT) =================
+/* ================= ROUTES ================= */
 
 // 🔓 PUBLIC ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/deals", dealRoutes);
 
-// 🔐 USER ACTION ROUTES
+// 🔐 USER ROUTES
 app.use("/api/claim", claimRoutes);
 app.use("/api/user-deals", userDealRoutes);
 
-// 🔐 ADMIN ROUTES (BEFORE GENERIC PROTECTED)
+// 🔐 ADMIN ROUTES
 app.use("/api/admin", adminRoutes);
 
-// 🔐 GENERIC PROTECTED ROUTES (LAST)
+// 🔐 PROTECTED ROUTES (KEEP LAST)
 app.use("/api", protectedRoutes);
 
-// Test route
+/* ================= TEST ================= */
 app.get("/", (req, res) => {
-  res.send("PerkStack API running");
+  res.status(200).send("🚀 PerkStack API running");
 });
 
-// Server start
+/* ================= SERVER ================= */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔥 Server running on port ${PORT}`);
 });
