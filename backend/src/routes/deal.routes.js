@@ -3,16 +3,37 @@ const Deal = require("../models/Deal");
 
 const router = express.Router();
 
-// get all deals
+/**
+ * GET /api/deals
+ * Public – get all deals
+ */
 router.get("/", async (req, res) => {
-  const deals = await Deal.find();
-  res.json(deals);
+  try {
+    const deals = await Deal.find().sort({ createdAt: -1 });
+    res.json(deals);
+  } catch (error) {
+    console.error("FETCH DEALS ERROR 👉", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-// get single deal
+/**
+ * GET /api/deals/:id
+ * Public – get single deal
+ */
 router.get("/:id", async (req, res) => {
-  const deal = await Deal.findById(req.params.id);
-  res.json(deal);
+  try {
+    const deal = await Deal.findById(req.params.id);
+
+    if (!deal) {
+      return res.status(404).json({ message: "Deal not found" });
+    }
+
+    res.json(deal);
+  } catch (error) {
+    console.error("FETCH DEAL ERROR 👉", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;
