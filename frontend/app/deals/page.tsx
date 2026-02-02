@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { fetchDeals } from "@/lib/api";
 import { motion } from "framer-motion";
 
@@ -15,6 +16,8 @@ type Deal = {
 };
 
 export default function DealsPage() {
+  const router = useRouter();
+
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
@@ -22,7 +25,7 @@ export default function DealsPage() {
   const [query, setQuery] = useState("");
   const [access, setAccess] = useState<"all" | "locked" | "unlocked">("all");
 
-  // 🔐 LOGIN GUARD — SESSION STORAGE ONLY
+  /* ================= AUTH + FETCH DEALS ================= */
   useEffect(() => {
     const token =
       typeof window !== "undefined"
@@ -30,7 +33,7 @@ export default function DealsPage() {
         : null;
 
     if (!token) {
-      window.location.replace("/login?redirect=/deals");
+      router.replace("/login?redirect=/deals");
       return;
     }
 
@@ -38,11 +41,22 @@ export default function DealsPage() {
 
     fetchDeals()
       .then((data: any) => {
-        setDeals(data.deals ?? data);
+        console.log("DEALS API RESPONSE 👉", data);
+
+        if (Array.isArray(data)) {
+          setDeals(data);
+        } else {
+          setDeals([]);
+        }
+      })
+      .catch((err) => {
+        console.error("FETCH DEALS FAILED 👉", err);
+        setDeals([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [router]);
 
+  /* ================= FILTER LOGIC ================= */
   const filteredDeals = useMemo(() => {
     return deals.filter((deal) => {
       const matchQuery =
@@ -58,7 +72,7 @@ export default function DealsPage() {
     });
   }, [deals, query, access]);
 
-  // 🚫 RENDER NOTHING UNTIL AUTH CHECK
+  /* ================= GUARDS ================= */
   if (!authChecked) return null;
 
   if (loading) {
@@ -74,6 +88,7 @@ export default function DealsPage() {
     );
   }
 
+  /* ================= UI ================= */
   return (
     <div className="p-10 space-y-6">
       <h1 className="text-3xl font-bold">🔥 PerkStack Deals</h1>
@@ -90,7 +105,9 @@ export default function DealsPage() {
         <select
           className="border rounded px-3 py-2 w-full md:w-48"
           value={access}
-          onChange={(e) => setAccess(e.target.value as any)}
+          onChange={(e) =>
+            setAccess(e.target.value as "all" | "locked" | "unlocked")
+          }
         >
           <option value="all">All Deals</option>
           <option value="locked">Locked Only</option>
@@ -114,17 +131,13 @@ export default function DealsPage() {
               href={`/deals/${deal._id}`}
               className="block border p-4 rounded-xl shadow-sm hover:shadow-md transition"
             >
-
-              
-              
+              <h3 className="text-lg font-semibold">{deal.title}</h3>
 
               <p className="text-gray-600 mt-1 line-clamp-2">
                 {deal.description}
               </p>
 
-              <p className="text-sm text-blue-600 mt-2">
-                {deal.partner}
-              </p>
+              <p className="text-sm text-blue-600 mt-2">{deal.partner}</p>
 
               <p className="mt-3 text-sm font-medium text-black">
                 View Deal →
