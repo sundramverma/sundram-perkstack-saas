@@ -1,16 +1,16 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const User = require("../models/User");
+const Claim = require("../models/Claim");
 const Deal = require("../models/Deal");
 const auth = require("../middleware/auth.middleware");
 
 const router = express.Router();
 
+/* ================= CLAIM DEAL ================= */
 router.post("/:dealId", auth, async (req, res) => {
   try {
     const { dealId } = req.params;
 
-    // ✅ validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(dealId)) {
       return res.status(400).json({ message: "Invalid deal ID" });
     }
@@ -20,40 +20,31 @@ router.post("/:dealId", auth, async (req, res) => {
       return res.status(404).json({ message: "Deal not found" });
     }
 
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    // ❌ duplicate claim check
+    const existing = await Claim.findOne({
+      user: req.user.id,
+      deal: dealId,
+    });
 
-    // ✅ ensure claims array exists
-    if (!Array.isArray(user.claims)) {
-      user.claims = [];
-    }
-
-    const alreadyClaimed = user.claims.find(
-      (c) => c.dealId.toString() === dealId
-    );
-
-    if (alreadyClaimed) {
+    if (existing) {
       return res.status(400).json({ message: "Deal already claimed" });
     }
 
     // 🔒 locked deal protection
-    if (deal.isLocked === true && user.isVerified !== true) {
+    if (deal.isLocked && !req.user.isVerified) {
       return res
         .status(403)
         .json({ message: "Verification required to claim this deal" });
     }
 
-    user.claims.push({
-      dealId: deal._id,
-      status: "pending",
+    const claim = await Claim.create({
+      user: req.user.id,
+      deal: dealId,
     });
 
-    await user.save();
-
     res.json({
-      message: "Deal claimed successfully. Awaiting approval.",
+      message: "Claim request sent to admin",
+      claim,
     });
   } catch (error) {
     console.error("CLAIM ERROR 👉", error);
