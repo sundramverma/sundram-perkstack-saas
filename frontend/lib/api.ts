@@ -1,13 +1,47 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
-/**
- * Generic API helper (AUTH + NON-AUTH)
- */
+/* ================= PUBLIC AUTH REQUEST (LOGIN / REGISTER) ================= */
+export async function authRequest(
+  path: string,
+  options: RequestInit = {}
+) {
+  if (!API_URL) {
+    throw new Error("API URL not defined");
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {}
+
+  if (!res.ok) {
+    return {
+      error: true,
+      status: res.status,
+      message: data.message || "API Error",
+    };
+  }
+
+  return data;
+}
+
+/* ================= AUTHENTICATED REQUEST ================= */
 export async function apiRequest(
   path: string,
   options: RequestInit = {}
 ) {
+  if (!API_URL) {
+    throw new Error("API URL not defined");
+  }
+
   const token =
     typeof window !== "undefined"
       ? sessionStorage.getItem("perkstack_token")
@@ -25,11 +59,8 @@ export async function apiRequest(
   let data: any = {};
   try {
     data = await res.json();
-  } catch {
-    // ignore JSON parse error
-  }
+  } catch {}
 
-  // ❗ Do NOT crash app on 401/403
   if (!res.ok) {
     return {
       error: true,
@@ -41,10 +72,12 @@ export async function apiRequest(
   return data;
 }
 
-/**
- * 🔓 PUBLIC DEALS API (NO AUTH REQUIRED)
- */
+/* ================= PUBLIC DEALS ================= */
 export async function fetchDeals() {
+  if (!API_URL) {
+    throw new Error("API URL not defined");
+  }
+
   const res = await fetch(`${API_URL}/api/deals`, {
     cache: "no-store",
   });
