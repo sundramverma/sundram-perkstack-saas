@@ -16,15 +16,14 @@ const app = express();
 /* ================= DATABASE ================= */
 connectDB();
 
-/* ================= CORS (FINAL FIX) ================= */
+/* ================= CORS (FINAL – EXPRESS SAFE) ================= */
 app.use(
   cors({
     origin: [
-      "http://localhost:3000", // local frontend
-      "https://sundram-perkstack-saas.vercel.app", // vercel frontend
+      "http://localhost:3000",
+      "https://sundram-perkstack-saas.vercel.app",
     ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -45,7 +44,7 @@ app.use("/api/user-deals", userDealRoutes);
 // 🔐 ADMIN ROUTES
 app.use("/api/admin", adminRoutes);
 
-// 🔐 PROTECTED ROUTES (KEEP LAST)
+// 🔐 PROTECTED ROUTES (LAST)
 app.use("/api", protectedRoutes);
 
 /* ================= TEST ================= */
