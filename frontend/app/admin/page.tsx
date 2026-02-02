@@ -3,96 +3,98 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 
+type Claim = {
+  _id: string;
+  status: "pending" | "approved" | "rejected";
+  user: {
+    name: string;
+    email: string;
+  };
+  deal: {
+    title: string;
+  };
+};
+
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
   const [error, setError] = useState("");
 
-  const loadUsers = () => {
-    apiRequest("/api/admin/users").then((res: any) => {
-      if (res?.error) {
-        setError(res.message || "Admin access only");
-        setUsers([]);
-      } else {
-        setUsers(Array.isArray(res) ? res : []);
-      }
-    });
+  const loadClaims = async () => {
+    const res = await apiRequest("/api/admin/claims");
+
+    if (res?.error) {
+      setError(res.message || "Admin access only");
+      setClaims([]);
+    } else {
+      setClaims(Array.isArray(res) ? res : []);
+    }
   };
 
   useEffect(() => {
-    loadUsers();
+    loadClaims();
   }, []);
 
   const updateClaim = async (
-    userId: string,
-    dealId: string,
-    status: "approved" | "rejected"
+    claimId: string,
+    action: "approve" | "reject"
   ) => {
-    await apiRequest("/api/admin/claim-action", {
-      method: "POST",
-      body: JSON.stringify({ userId, dealId, status }),
-    });
+    const res = await apiRequest(
+      `/api/admin/claims/${claimId}/${action}`,
+      { method: "PUT" }
+    );
 
-    alert(`Claim ${status}`);
-    loadUsers(); // refresh list
+    if (!res?.error) {
+      alert(`Claim ${action}d`);
+      loadClaims();
+    }
   };
 
   return (
-    <div className="p-10 space-y-6 text-white">
+    <div className="min-h-screen bg-black text-white p-10 space-y-6">
       <h1 className="text-3xl font-bold">🛠 Admin Dashboard</h1>
 
       {error && <p className="text-red-500">{error}</p>}
 
-      {users.map((u) => (
+      {claims.length === 0 && !error && (
+        <p className="text-gray-400">No claims found</p>
+      )}
+
+      {claims.map((c) => (
         <div
-          key={u._id}
-          className="border border-gray-700 p-4 rounded-xl space-y-3"
+          key={c._id}
+          className="border border-gray-700 p-4 rounded-xl space-y-2"
         >
-          <div>
-            <p className="font-semibold">{u.name}</p>
-            <p className="text-sm text-gray-400">{u.email}</p>
-          </div>
+          <p className="font-semibold">
+            {c.user.name} ({c.user.email})
+          </p>
 
-          {/* 🔥 CLAIM REQUESTS */}
-          {u.claims?.length > 0 ? (
-            u.claims.map((c: any) => (
-              <div
-                key={c.dealId}
-                className="border border-gray-600 p-3 rounded flex justify-between items-center"
+          <p className="text-sm text-gray-300">
+            Deal: <b>{c.deal.title}</b>
+          </p>
+
+          <p className="text-sm">
+            Status:{" "}
+            <span className="capitalize text-yellow-400">
+              {c.status}
+            </span>
+          </p>
+
+          {c.status === "pending" && (
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => updateClaim(c._id, "approve")}
+                className="px-4 py-1 bg-green-600 rounded"
               >
-                <div>
-                  <p className="font-medium">{c.dealTitle}</p>
-                  <p className="text-xs text-gray-400">
-                    Status: {c.status}
-                  </p>
-                </div>
+                Approve
+              </button>
 
-                {c.status === "pending" && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() =>
-                        updateClaim(u._id, c.dealId, "approved")
-                      }
-                      className="px-3 py-1 bg-green-600 rounded text-sm"
-                    >
-                      Approve
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        updateClaim(u._id, c.dealId, "rejected")
-                      }
-                      className="px-3 py-1 bg-red-600 rounded text-sm"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500">
-              No claims from this user
-            </p>
+              <button
+                onClick={() => updateClaim(c._id, "reject")}
+                className="px-4 py-1 bg-red-600 rounded"
+              >
+                Reject
+              </button>
+            </div>
           )}
         </div>
       ))}
