@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authRequest } from "@/lib/api";
 
 type Role = "user" | "admin";
 
@@ -17,27 +18,24 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await authRequest("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
+      if (res?.error) {
+        throw new Error(res.message || "Login failed");
       }
 
-      // ✅ SESSION STORAGE ONLY
-      sessionStorage.setItem("perkstack_token", data.token);
-      sessionStorage.setItem("perkstack_role", data.role);
+      // ✅ SESSION STORAGE
+      sessionStorage.setItem("perkstack_token", res.token);
+      sessionStorage.setItem("perkstack_role", res.role);
 
       const params = new URLSearchParams(window.location.search);
       const redirect = params.get("redirect");
 
       window.location.href =
-        redirect || (data.role === "admin" ? "/admin" : "/dashboard");
+        redirect || (res.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {
@@ -55,14 +53,18 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setRole("user")}
-            className={`w-1/2 py-2 ${role === "user" ? "bg-blue-600" : ""}`}
+            className={`w-1/2 py-2 ${
+              role === "user" ? "bg-blue-600" : "bg-black"
+            }`}
           >
             User
           </button>
           <button
             type="button"
             onClick={() => setRole("admin")}
-            className={`w-1/2 py-2 ${role === "admin" ? "bg-blue-600" : ""}`}
+            className={`w-1/2 py-2 ${
+              role === "admin" ? "bg-blue-600" : "bg-black"
+            }`}
           >
             Admin
           </button>
