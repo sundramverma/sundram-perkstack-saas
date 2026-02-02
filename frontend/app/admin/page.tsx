@@ -3,20 +3,18 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 
-type Claim = {
-  _id: string;
+type AdminClaim = {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  dealId: string;
+  title: string;
+  partner: string;
   status: "pending" | "approved" | "rejected";
-  user: {
-    name: string;
-    email: string;
-  };
-  deal: {
-    title: string;
-  };
 };
 
 export default function AdminDashboard() {
-  const [claims, setClaims] = useState<Claim[]>([]);
+  const [claims, setClaims] = useState<AdminClaim[]>([]);
   const [error, setError] = useState("");
 
   const loadClaims = async () => {
@@ -26,6 +24,7 @@ export default function AdminDashboard() {
       setError(res.message || "Admin access only");
       setClaims([]);
     } else {
+      setError("");
       setClaims(Array.isArray(res) ? res : []);
     }
   };
@@ -35,17 +34,19 @@ export default function AdminDashboard() {
   }, []);
 
   const updateClaim = async (
-    claimId: string,
-    action: "approve" | "reject"
+    userId: string,
+    dealId: string,
+    status: "approved" | "rejected"
   ) => {
-    const res = await apiRequest(
-      `/api/admin/claims/${claimId}/${action}`,
-      { method: "PUT" }
-    );
+    const res = await apiRequest("/api/admin/claims", {
+      method: "PUT",
+      body: JSON.stringify({ userId, dealId, status }),
+    });
 
     if (!res?.error) {
-      alert(`Claim ${action}d`);
       loadClaims();
+    } else {
+      alert(res.message || "Action failed");
     }
   };
 
@@ -59,22 +60,30 @@ export default function AdminDashboard() {
         <p className="text-gray-400">No claims found</p>
       )}
 
-      {claims.map((c) => (
+      {claims.map((c, idx) => (
         <div
-          key={c._id}
+          key={idx}
           className="border border-gray-700 p-4 rounded-xl space-y-2"
         >
           <p className="font-semibold">
-            {c.user.name} ({c.user.email})
+            {c.userName} ({c.userEmail})
           </p>
 
           <p className="text-sm text-gray-300">
-            Deal: <b>{c.deal.title}</b>
+            Deal: <b>{c.title}</b> — {c.partner}
           </p>
 
           <p className="text-sm">
             Status:{" "}
-            <span className="capitalize text-yellow-400">
+            <span
+              className={`capitalize ${
+                c.status === "pending"
+                  ? "text-yellow-400"
+                  : c.status === "approved"
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+            >
               {c.status}
             </span>
           </p>
@@ -82,14 +91,18 @@ export default function AdminDashboard() {
           {c.status === "pending" && (
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => updateClaim(c._id, "approve")}
+                onClick={() =>
+                  updateClaim(c.userId, c.dealId, "approved")
+                }
                 className="px-4 py-1 bg-green-600 rounded"
               >
                 Approve
               </button>
 
               <button
-                onClick={() => updateClaim(c._id, "reject")}
+                onClick={() =>
+                  updateClaim(c.userId, c.dealId, "rejected")
+                }
                 className="px-4 py-1 bg-red-600 rounded"
               >
                 Reject
