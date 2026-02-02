@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
 export default function DealDetailsPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
   const [deal, setDeal] = useState<any>(null);
@@ -13,7 +13,7 @@ export default function DealDetailsPage() {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔐 LOGIN GUARD (SESSION STORAGE)
+  /* ================= AUTH GUARD ================= */
   useEffect(() => {
     const token = sessionStorage.getItem("perkstack_token");
     if (!token) {
@@ -21,19 +21,15 @@ export default function DealDetailsPage() {
     }
   }, [id, router]);
 
+  /* ================= FETCH DEAL + CLAIM STATUS ================= */
   useEffect(() => {
+    if (!id) return;
+
     const fetchDeal = async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/deals/${id}`
-        );
-
-        if (!res.ok) throw new Error("Deal not found");
-
-        const data = await res.json();
-
-        // 🔥 IMPORTANT FIX: handle BOTH response shapes
-        const dealData = data.deal ?? data;
+        // ✅ ALWAYS use apiRequest (correct base URL + headers)
+        const data = await apiRequest(`/api/deals/${id}`);
+        if (data?.error) throw new Error(data.message);
 
         let claimStatus = null;
         let unlocked = false;
@@ -47,9 +43,9 @@ export default function DealDetailsPage() {
           }
         }
 
-        setDeal({ ...dealData, claimStatus, unlocked });
+        setDeal({ ...data, claimStatus, unlocked });
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message || "Failed to load deal");
       } finally {
         setLoading(false);
       }
@@ -58,6 +54,7 @@ export default function DealDetailsPage() {
     fetchDeal();
   }, [id]);
 
+  /* ================= CLAIM DEAL ================= */
   const handleClaim = async () => {
     setClaiming(true);
     setError("");
@@ -68,52 +65,58 @@ export default function DealDetailsPage() {
 
     if (res?.error) {
       if (res.status === 401) {
-        router.push(`/login?redirect=/deals/${id}`);
+        router.replace(`/login?redirect=/deals/${id}`);
         return;
       }
-      setError(res.message);
+      setError(res.message || "Claim failed");
       setClaiming(false);
       return;
     }
 
-    alert("Deal claimed! Awaiting approval.");
-    router.refresh();
+    alert("Deal claimed! Awaiting admin approval.");
+    router.refresh(); // re-fetch server state
     setClaiming(false);
   };
 
-  if (loading) return <p className="p-10 text-gray-500">Loading deal...</p>;
-  if (!deal) return <p className="p-10 text-red-500">Deal not found</p>;
+  /* ================= UI ================= */
+  if (loading) {
+    return <p className="p-10 text-gray-400">Loading deal...</p>;
+  }
+
+  if (!deal) {
+    return <p className="p-10 text-red-500">Deal not found</p>;
+  }
 
   return (
-    <div className="max-w-3xl mx-auto p-10 space-y-6">
+    <div className="max-w-3xl mx-auto p-10 space-y-6 text-white">
       <h1 className="text-4xl font-bold">{deal.title}</h1>
 
-      <p className="text-gray-200">
-        <strong className="text-white">Partner:</strong>{" "}
+      <p>
+        <b>Partner:</b>{" "}
         <span className="text-blue-400">{deal.partner}</span>
       </p>
 
-      <p className="text-gray-200">
-        <strong className="text-white">Category:</strong>{" "}
+      <p>
+        <b>Category:</b>{" "}
         <span className="text-green-400">{deal.category}</span>
       </p>
 
-      <p className="text-gray-200">
-        <strong className="text-white">Eligibility:</strong>{" "}
+      <p>
+        <b>Eligibility:</b>{" "}
         <span className="text-yellow-400">
           {deal.eligibility || "All startups"}
         </span>
       </p>
 
       {deal.isLocked && !deal.unlocked && (
-        <div className="p-4 border border-yellow-300 rounded">
-          🔒 This deal is locked. Verification or admin approval is required.
+        <div className="p-4 border border-yellow-400 rounded">
+          🔒 This deal is locked. Admin approval or verification required.
         </div>
       )}
 
       {deal.claimStatus && (
-        <p className="text-sm text-blue-600">
-          Claim status: <strong>{deal.claimStatus}</strong>
+        <p className="text-sm text-blue-400">
+          Claim status: <b>{deal.claimStatus}</b>
         </p>
       )}
 
@@ -121,7 +124,7 @@ export default function DealDetailsPage() {
         <button
           onClick={handleClaim}
           disabled={claiming}
-          className="px-6 py-3 bg-black text-white rounded hover:bg-gray-800"
+          className="px-6 py-3 bg-blue-600 rounded hover:bg-blue-500"
         >
           {claiming ? "Claiming..." : "Claim Deal"}
         </button>
