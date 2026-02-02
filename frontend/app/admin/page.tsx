@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
 type AdminClaim = {
@@ -14,9 +15,13 @@ type AdminClaim = {
 };
 
 export default function AdminDashboard() {
+  const router = useRouter();
+
   const [claims, setClaims] = useState<AdminClaim[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  /* ================= LOAD CLAIMS ================= */
   const loadClaims = async () => {
     const res = await apiRequest("/api/admin/claims");
 
@@ -27,12 +32,26 @@ export default function AdminDashboard() {
       setError("");
       setClaims(Array.isArray(res) ? res : []);
     }
+
+    setLoading(false);
   };
 
+  /* ================= ADMIN AUTH GUARD ================= */
   useEffect(() => {
+    const token = sessionStorage.getItem("perkstack_token");
+    const role = sessionStorage.getItem("perkstack_role");
+
+    // 🔒 BLOCK UNAUTH / NON-ADMIN
+    if (!token || role !== "admin") {
+      router.replace("/login");
+      return;
+    }
+
+    // ✅ SAFE TO LOAD ADMIN DATA
     loadClaims();
   }, []);
 
+  /* ================= UPDATE CLAIM ================= */
   const updateClaim = async (
     userId: string,
     dealId: string,
@@ -49,6 +68,15 @@ export default function AdminDashboard() {
       alert(res.message || "Action failed");
     }
   };
+
+  /* ================= UI STATES ================= */
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-400">
+        Loading admin dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-10 space-y-6">
