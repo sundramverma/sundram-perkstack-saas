@@ -1,14 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
+const API_URL = "https://sundram-perkstack-saas-backend.onrender.com";
 
-/* ================= PUBLIC AUTH REQUEST (LOGIN / REGISTER) ================= */
+/* ================= PUBLIC AUTH REQUEST ================= */
 export async function authRequest(
   path: string,
   options: RequestInit = {}
 ) {
-  if (!API_URL) {
-    throw new Error("API URL not defined");
-  }
-
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -17,10 +13,7 @@ export async function authRequest(
     },
   });
 
-  let data: any = {};
-  try {
-    data = await res.json();
-  } catch {}
+  const data = await res.json();
 
   if (!res.ok) {
     return {
@@ -38,10 +31,6 @@ export async function apiRequest(
   path: string,
   options: RequestInit = {}
 ) {
-  if (!API_URL) {
-    throw new Error("API URL not defined");
-  }
-
   const token =
     typeof window !== "undefined"
       ? sessionStorage.getItem("perkstack_token")
@@ -56,10 +45,7 @@ export async function apiRequest(
     },
   });
 
-  let data: any = {};
-  try {
-    data = await res.json();
-  } catch {}
+  const data = await res.json();
 
   if (!res.ok) {
     return {
@@ -74,10 +60,6 @@ export async function apiRequest(
 
 /* ================= PUBLIC DEALS ================= */
 export async function fetchDeals() {
-  if (!API_URL) {
-    throw new Error("API URL not defined");
-  }
-
   const res = await fetch(`${API_URL}/api/deals`, {
     cache: "no-store",
   });

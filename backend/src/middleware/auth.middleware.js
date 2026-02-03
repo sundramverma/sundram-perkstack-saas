@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Admin = require("../models/Admin");
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -11,27 +12,34 @@ const authMiddleware = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    // verify token
+    // 🔐 verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 🔥 FETCH USER FROM DB
-    const user = await User.findById(decoded.id).select(
-      "_id role isVerified"
-    );
+    let account;
 
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
+    // 🔥 ROLE BASED FETCH (THIS WAS MISSING)
+    if (decoded.role === "admin") {
+      account = await Admin.findById(decoded.id).select("_id role");
+    } else {
+      account = await User.findById(decoded.id).select(
+        "_id role isVerified"
+      );
     }
 
-    // 🔥 attach full user info
+    if (!account) {
+      return res.status(401).json({ message: "Account not found" });
+    }
+
+    // 🔥 attach unified req.user
     req.user = {
-      id: user._id,
-      role: user.role,
-      isVerified: user.isVerified,
+      id: account._id,
+      role: account.role,
+      isVerified: account.isVerified ?? true,
     };
 
     next();
   } catch (error) {
+    console.error("AUTH MIDDLEWARE ERROR 👉", error);
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };

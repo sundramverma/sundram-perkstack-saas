@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, authRequest } from "@/lib/api"; // 👈 authRequest ADD
 
 export default function HomePage() {
   const [open, setOpen] = useState(false);
@@ -23,21 +23,15 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center px-6 overflow-hidden">
-      
-      {/* 🔥 AUTO SCALE ANIMATION */}
       <motion.div
-  initial={{ scale: 0.96 }}
-  animate={{ scale: [0.96, 1.03, 0.96] }}
-  transition={{
-    duration: 6,        
-    repeat: Infinity,
-    ease: "easeInOut",
-  }}
->
+        initial={{ scale: 0.96 }}
+        animate={{ scale: [0.96, 1.03, 0.96] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+      >
         <h1 className="text-5xl md:text-6xl font-extrabold">
           Unlock Premium SaaS Perks
           <span className="block text-blue-500 mt-2">
-            Built for Startups 
+            Built for Startups
           </span>
         </h1>
 
@@ -77,7 +71,7 @@ export default function HomePage() {
   );
 }
 
-/* ================= LOGIN MODAL (3rd SS STYLE) ================= */
+/* ================= LOGIN MODAL ================= */
 
 function LoginModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -91,7 +85,8 @@ function LoginModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError("");
 
-    const res = await apiRequest("/api/auth/login", {
+    // ✅ LOGIN MUST USE authRequest (NO TOKEN ATTACHED)
+    const res = await authRequest("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password, role }),
     });
@@ -102,6 +97,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    // ✅ SAVE FRESH TOKEN
     sessionStorage.setItem("perkstack_token", res.token);
     sessionStorage.setItem("perkstack_role", res.role);
 
@@ -149,7 +145,9 @@ function LoginModal({ onClose }: { onClose: () => void }) {
           {role === "admin" ? "Admin Login" : "User Login"}
         </h2>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {error && (
+          <p className="text-red-500 text-sm text-center">{error}</p>
+        )}
 
         <input
           type="email"
