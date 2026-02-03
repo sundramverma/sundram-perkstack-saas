@@ -23,10 +23,14 @@ router.get("/claims", auth, admin, async (req, res) => {
           userId: user._id,
           userName: user.name,
           userEmail: user.email,
-          dealId: c.dealId?._id,
-          title: c.dealId?.title,
-          partner: c.dealId?.partner,
-          isLocked: c.dealId?.isLocked,
+
+          // 🔥 IMPORTANT FIX
+          claimId: c._id,              // <-- ADD THIS
+
+          dealId: c.dealId?._id || null,
+          title: c.dealId?.title || "--",
+          partner: c.dealId?.partner || "--",
+          isLocked: c.dealId?.isLocked ?? false,
           status: c.status,
         });
       });
@@ -42,11 +46,11 @@ router.get("/claims", auth, admin, async (req, res) => {
 /* ================= ADMIN: APPROVE / REJECT ================= */
 /**
  * PUT /api/admin/claims
- * body: { userId, dealId, status }
+ * body: { userId, claimId, status }
  */
 router.put("/claims", auth, admin, async (req, res) => {
   try {
-    const { userId, dealId, status } = req.body;
+    const { userId, claimId, status } = req.body;
 
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
@@ -57,10 +61,8 @@ router.put("/claims", auth, admin, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const claim = user.claims.find(
-      (c) => c.dealId.toString() === dealId
-    );
-
+    // 🔥 REAL FIX: find claim by its own _id
+    const claim = user.claims.id(claimId);
     if (!claim) {
       return res.status(404).json({ message: "Claim not found" });
     }
